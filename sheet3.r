@@ -7,6 +7,6 @@ print("initial state:")
 print(x)
 
 # x <- H(2)*x
-x <- X(2)*x
+x <- H(2)*x
 print("after H(1):")
 print(x)

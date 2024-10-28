@@ -28,25 +28,40 @@ class quant:
         return
     
     # gates
-    def hadamard(self, qubit):
-        """ apply Hadamard gate to qubit """
-        pass
 
     def X(self, qubit):
         """ apply X (NOT) gate to qubit """
         old_state = copy.deepcopy(self.state)
-        qubit_index = qubit - 1 # since q1 is the first qubit and not q0
 
         for i,coeff in enumerate(old_state):
 
-            if (i >> qubit_index) & 1 == 0:
-            # if (bin(i)[-qubit]) == '0':
+            # state = list(format(i, f'0{self.n}b')) # convert to binary 
+            # flip_index = (int(state[-qubit])+1)%2 # 0 -> 1, 1 -> 0
+            # state[-qubit] = str(flip_index) # apply the changed bit to the state
+            # index = int("".join(state),2) # convert back to decimal
 
-                flipped_index = i | (1 << qubit_index)
+            index = i ^ (1 << (qubit - 1))  # finding the "partner index"
 
-                self.state[i] = old_state[flipped_index]
-                self.state[flipped_index] = old_state[i]
-        print(old_state)
+            # exchange the coefficients of the corresponding states
+            self.state[i] = old_state[index] 
+            self.state[index] = old_state[i]
+
+        return
+
+    def H(self, qubit):
+        """ apply Hadamard gate to qubit """
+        old_state = copy.deepcopy(self.state)
+
+        for i,coeff in enumerate(old_state):
+            
+            index = i ^ (1 << (qubit - 1)) # 
+
+            # apply the local operation
+            self.state[i] = (old_state[index]-old_state[i]) / np.sqrt(2)
+            self.state[index] = (old_state[i] + old_state[index]) / np.sqrt(2)
+        return
+
+
 
 
 if __name__ == "__main__":
@@ -57,6 +72,6 @@ if __name__ == "__main__":
     print("Initial state:")
     x.print_state(precision=5)
     print("apply X gate to qubit 1:")
-    x.X(2)
+    x.H(1)
     x.print_state(precision=5)
     
