@@ -30,7 +30,6 @@ class quant:
         return
     
     # gates
-
     def X(self, qubit):
         """ apply X (NOT) gate to qubit """
         old_state = copy.deepcopy(self.state) # avoid overwriting
@@ -74,16 +73,32 @@ class quant:
 
 
 if __name__ == "__main__":
-    coeffs = np.arange(1,9)
-    print(coeffs)
-    x = quant(3, coeffs=coeffs)
-    x = quant(2)
-    
+    print("Task 4:")
+    x4 = quant(2)
     print("Initial state:")
-    x.print_state(precision=5)
-    print("apply X gate to qubit 1:")
-    x.H(1).CNOT(1,2)
-    x.print_state(precision=5)
+    x4.print_state(precision=7)
+    x4.H(2).X(1)
+    print("After applying H_2 and X_1:")
+    x4.print_state(precision=7)
+    
+    print("############ what was to show ############")
+    print("Task 5:")
+    x5 = quant(2)
+    print("Initial state:")
+    x5.print_state(precision=7)
+    print("After applying H_1 and CNOT_(1,2):")
+    x5.H(1).CNOT(1,2)
+    x5.print_state(precision=7)
+    print("############################################") 
+
+    print("More complex example:")
+    print("Initial state:")
+    x = quant(3, coeffs=range(1,9))
+    x.print_state(precision=7)
+    
+    x = x.H(1).CNOT(1,2).CNOT(2,3).H(3)
+    print("After applying H_1, CNOT_(1,2), CNOT_(2,3), and H_3:")
+    x.print_state(precision=7)
 
 
 
