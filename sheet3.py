@@ -21,9 +21,11 @@ class quant:
             self.state[0] = 1
         pass
     
-    def print_state(self, precision=3):
+    def print_state(self, precision=3, print_zeros=False):
         """ print the quantum state """
         for i,coeff in enumerate(self.state):
+            if not print_zeros and np.isclose(coeff, 0):
+                continue
             print(f"{coeff:.{precision}}|{bin(i)[2:]:>0{self.n}}>")
         return
     
@@ -31,14 +33,9 @@ class quant:
 
     def X(self, qubit):
         """ apply X (NOT) gate to qubit """
-        old_state = copy.deepcopy(self.state)
+        old_state = copy.deepcopy(self.state) # avoid overwriting
 
-        for i,coeff in enumerate(old_state):
-
-            # state = list(format(i, f'0{self.n}b')) # convert to binary 
-            # flip_index = (int(state[-qubit])+1)%2 # 0 -> 1, 1 -> 0
-            # state[-qubit] = str(flip_index) # apply the changed bit to the state
-            # index = int("".join(state),2) # convert back to decimal
+        for i,_ in enumerate(old_state):
 
             index = i ^ (1 << (qubit - 1))  # finding the "partner index"
 
@@ -46,20 +43,32 @@ class quant:
             self.state[i] = old_state[index] 
             self.state[index] = old_state[i]
 
-        return
+        return self
 
     def H(self, qubit):
         """ apply Hadamard gate to qubit """
-        old_state = copy.deepcopy(self.state)
+        old_state = copy.deepcopy(self.state) # avoid overwriting
 
-        for i,coeff in enumerate(old_state):
+        for i,_ in enumerate(old_state):
             
-            index = i ^ (1 << (qubit - 1)) # 
+            index = i ^ (1 << (qubit - 1)) # finding the "partner index"
 
             # apply the local operation
             self.state[i] = (old_state[index]-old_state[i]) / np.sqrt(2)
             self.state[index] = (old_state[i] + old_state[index]) / np.sqrt(2)
-        return
+        return self
+
+    def CNOT(self, control, target):
+        """ apply CNOT gate with control and target qubits """
+        old_state = copy.deepcopy(self.state) # avoid overwriting
+
+        for i,_ in enumerate(old_state):
+            if i & (1 << (control - 1)): # check if control qubit is 1
+                
+                index = i ^ (1 << (target - 1))
+                self.state[i] = old_state[index]
+                self.state[index] = old_state[i]
+        return self
 
 
 
@@ -68,10 +77,14 @@ if __name__ == "__main__":
     coeffs = np.arange(1,9)
     print(coeffs)
     x = quant(3, coeffs=coeffs)
+    x = quant(2)
     
     print("Initial state:")
     x.print_state(precision=5)
     print("apply X gate to qubit 1:")
-    x.H(1)
+    x.H(1).CNOT(1,2)
     x.print_state(precision=5)
+
+
+
     
