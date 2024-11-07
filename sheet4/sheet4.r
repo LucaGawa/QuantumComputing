@@ -24,7 +24,8 @@ for (i in 1:3) {
 }
 
 plot(x)
-# print(x)
+print("task 6: Bernstein-Vazirani algorithm for s=010. The first n=3 qubits show the state |s> the the helper qubit is in the superposition from the H gate at the beginning.")
+print(x)
 
 ################
 #    Task 7    #
@@ -45,6 +46,9 @@ for (i in 1:4) {
   q <- Ri(i, 7-i, sign=-1)*q
 }
 
+print("task 7: state |psi(x=1/4)>")
+print(q)
+
 ################
 #    Task 8    #
 ################
@@ -53,6 +57,7 @@ psi <- qft(q)
 rep <- 1000000000
 
 hist(measure(psi, rep=rep), freq=FALSE)
+print("task 8: measurement after qFT")
 summary(measure(psi, rep=rep))
 
 
