@@ -41,28 +41,23 @@ q <- qft(q, inverse=TRUE)
 n <- 3
 
 coefs <- rep(0, 2^(2*n))
-# coefs[33] = 1
-coefs[3] = 1
+coefs[28] = 1
 q <- qstate(2*n, coefs=coefs)
 print(q)
 
 q <- qft(q, bits=c(1:n))
 
 for (j in 1:n) {
-    # print(j)
-    print("")
-  for (k in 4:6) {
-    # print(k)
-    theta = 2 * pi *  2^(k-n-1)  / (2^(n-j+1))
-    phasegate <- sqgate(bit=j, M=array(as.complex(c(1,0,0,exp(1i*theta) )), dim=c(2,2))) 
+  for (k in n+1:2*n) {
+    theta = 2 * pi *  2^k  / (2^(n-j+1))
+    phasegate <- sqgate(bit=j, M=array(as.complex(c(1,0,0,exp(1i*theta*a) )), dim=c(2,2))) 
     q <- cqgate(bits=c(k, j), gate=phasegate) * q
-    # print(exp(1i*theta))
   }
 }
 
 q <- qft(q, bits=c(1:n), inverse=TRUE)
 
-plot(q)
+# plot(q)
 
 print(q)
 
