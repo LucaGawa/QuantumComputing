@@ -24,5 +24,11 @@ package `qsimulatR` is required.
 
 ```Rplots.pdf``` contains the circuit for task 6 and the histogram for task 8.
 
+### Sheet 6 
+Compiling with
+
+```Rscript sheet6/sheet6.R```
+
+package `qsimulatR` is required.
 
 
