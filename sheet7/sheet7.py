@@ -32,13 +32,11 @@ def shore(N):
     """
         factorize the integer N by using Shore's algorithm.
     """
-    i=0
     while True:
-        x = np.random.randint(1, N)
+        x = np.random.randint(1, N) # choose a random number x, 1 <= x <= N
         x = GCD(x, N)
-        i += 1
         if x != 1:
-            return x
+            return x # a non-trivial factor of N
         else:
             r = orderFinder(x,N)
             if not ((r%2 == 1) or (x**(r/2)%N == -1)): # r odd or x^r/2 =-1 (mod n)
@@ -63,7 +61,6 @@ def genString(M):
     string = ""
     for i in range(l):
         string += chr((M // (26**(l-i-1)))%26 + 97)
-
     return string
 
 def modularInverse(e, phi):
@@ -76,34 +73,40 @@ def modularInverse(e, phi):
     return (s % phi + phi) % phi
 
 def mod_pow(base, exponent, modulus):
+    """
+        method to calculate the power and the modulus without getting to 
+        large numbers
+    """
+    if modulus == 1:
+        return 0
     result = 1
-    base = base % modulus
-    while exponent > 0:
-        if exponent % 2 == 1:
-            result = (result * base) % modulus
-        exponent = exponent >> 1
-        base = (base * base) % modulus
+    for i in range(exponent):
+        result = (result * base) % modulus
     return result
 
 def decrypt(N, e, string):
+    """
+        decrypt the message string by finding the decryption key d from the encryption key e and the 
+        RSA modulus N. Using shore's algorithm to factorize N but with a classical order finding algorithm.
+    """
     q = shore(N)
     p = int(N/q)
+    print(f"p={p}, q={q}")
     phi = (p-1)*(q-1)
+    print(f"phi={phi}")
     _,s,_ = extendedGCD(e,phi)
     d = modularInverse(e,phi)
+    print(f"d={d}")
     M = genM(string)
+    print(f"M={M}")
     Md = mod_pow(M,d,N)
+    print(f"M^d={Md}")
     return genString(Md)
 
 if __name__ == "__main__":
     N = 71219839 
     e = 4187899
     string = "bwtlqv"
-    print(decrypt(N,e, string))
-
-    N = 121130231
-    e = 20579
-    string = "blhhay"
     print(decrypt(N,e, string))
 
 
