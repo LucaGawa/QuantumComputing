@@ -45,4 +45,10 @@ For task 3 the `R` file contains the code using the `qsimulatR` package. It can 
 ```Rscript sheet7/sheet7.r```
 
 
+### Sheet 8
+Compiling with
 
+```Rscript sheet8/sheet8.r``` 
+
+The package `qsimulatR` is required. The plots can be found in `Rplots.pdf` or in the
+pdf file for the analytical part.

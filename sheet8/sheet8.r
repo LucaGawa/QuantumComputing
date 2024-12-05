@@ -1,29 +1,25 @@
 library('qsimulatR')
 
-n <- 6
-psi <- qstate(n)
-psi <- X(n) * psi # apply a delta peak in position space
-# for (i in 1:(n)) {
-#   psi <- X(i) * psi
-#   psi <- H(i) * psi
-# }
-# psi <- H(2) * psi
-# mes = measure(psi) # measure the state
-# plot(hist(mes)) # plot the histogram of the state
 
+# define the gate R(theta) for applying a phase to a single qubit
 Rtheta <- function(i, theta) {
   return (sqgate(bit=i, M=array(as.complex(c(1,0,0,exp(1i*theta))), dim=c(2,2))))
 }
 
 
 free.time.evolution <- function(psi, dt) {
+  # perform the free time evolution for a single trotter time step dt
+  # input psi is the quantum state
+  
+
 n <- psi@nbits
-dp <- 2*pi/(2^n)
+dp <- 2*pi/(2^n) # discretization of the momentum space
 a <- pi^2/(n^2)
 b <- pi*dp/n
 c <- dp^2
 
-q <- qft(psi)
+# transform to the momentum space
+q <- qft(psi) # for a better performance and without a potential one do not need to transform the state for every time step back and forth (for the compacter code in the loop this is not done here for this excercise)
 
 # apply the global phase
 theta <- -n^2*a*dt/2
@@ -40,13 +36,18 @@ for (j in 1:n) {
     }
   }
 }
+
+# transform back to the position space
 q <- qft(q, inverse=TRUE)
 return(q)
 }
 
 harmonic.potential <- function(psi, dt, gamma, L){
+  # perform the harmonic potential part of the time evolution for a single trotter time step dt
+  # input psi is the quantum state
+
   n <- psi@nbits
-  dx <- L/(2^n)
+  dx <- L/(2^n) # discretization of the position space
   a <- gamma*(L/2)^2/(n^2)
   b <- gamma*L/2*dx/n
   c <- gamma*dx^2
@@ -69,19 +70,27 @@ for (j in 1:n) {
   return(q)
 }
 
-# mes <- measure(psi, rep=1000)
-# plot(hist(mes,only.nonzero=FALSE, freq=FALSE))
 
-dt <- 1
-for (i in (1:10)) {
-  psi <- harmonic.potential(psi, dt, 1, 1000)
-  psi <- free.time.evolution(psi, dt)
-  if (i %% 1 == 0) {
+n <- 6
+psi <- qstate(n)
+psi <- X(n) * psi # apply a delta peak in position space
+
+dt <- 1 # for a good approximation this should be smaller, but for showing the effect in a rough simulation this seems to be enough
+
+# task 2.1
+for (i in (1:11)) {
   mes <- measure(psi, rep=100000)
-  plot(hist(mes,only.nonzero=FALSE, freq=FALSE))
-  }
+  hist(mes,only.nonzero=FALSE, freq=FALSE, ylim=c(0,1))
+  psi <- free.time.evolution(psi, dt) # apply the kinetic part in the momentum space
 }
 
+# task 2.3
+psi <- qstate(n)
+psi <- X(n) * psi # apply a delta peak in position space
+for (i in (1:10)) {
+  mes <- measure(psi, rep=100000)
+  hist(mes,only.nonzero=FALSE, freq=FALSE, ylim=c(0,1))
+  psi <- free.time.evolution(psi, dt) # apply the kinetic part in the momentum space
+  psi <- harmonic.potential(psi, dt, 100, 10) # apply the potential part in the real space
+}
 
-
-# print(psi)
