@@ -39,10 +39,10 @@ Sdagger <- function(bit) {
 }
 
 dt <- 1
-apply.H <- function(psi, dt){
 n <- 3
 psi <- create.qstate(n, representation="binary")
-print(psi)
+
+apply.H <- function(psi, dt){
 
 # apply P transformations 
 psi = S(2)*(H(2)*psi)
@@ -66,10 +66,16 @@ return(psi)
 
 
 # apply measurement
+for (i in 1:1) {
+  # psi = measure(psi, i)
 psi = apply.H(psi, dt)
+print(psi)
 mes <- measure(psi, rep=10000)
 hist(mes, only.nonzero=TRUE, freq=FALSE)
+}
+# psi = apply.H(psi, dt)
+# mes <- measure(psi, rep=10000)
+# hist(mes, only.nonzero=TRUE, freq=FALSE)
+
 
 plot(psi)
-print(psi)
-
