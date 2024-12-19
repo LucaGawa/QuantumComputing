@@ -52,3 +52,11 @@ Compiling with
 
 The package `qsimulatR` is required. The plots can be found in `Rplots.pdf` or in the
 pdf file for the analytical part.
+
+### Sheet 10
+Compiling with
+
+```Rscript sheet10/sheet10.r```
+
+The package `qsimulatR` is required. The plots can be found in `Rplots.pdf` or in the
+pdf file for the analytical part.
