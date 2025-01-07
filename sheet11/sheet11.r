@@ -157,45 +157,76 @@ cmultmodN <- function(c, psi, y, N, xbits, reg2, helpers){
   return(psi)
 }
 
-
-create_basis <- function(n) {
-  basis <- c()
-  for(i in 0:(2^n - 1)) {
-    # binary <- intToBits(i)[1:n]
-    basis[i + 1] <- 
-      paste0("|", i %/% 16, ">|a=", (i %/% 8) %% 2, 
-             ">|c2=", (i %/% 4) %% 2, ">|c1=", (i %/% 2) %% 2, ">|c=", i %% 2, ">")
+cexpmodN <- function(c, j, x, y, N, xbits, reg2, helpers){
+  # controlled version of |x>|0> -> |x^j*y mod N>|0>
+  # xbits has to have the same length as reg1
+  # 4 helper bits are required
+  psi <- x
+  for (i in c(1:j)) {
+    psi <- cmultmodN(c, psi, y, N, xbits, reg2, helpers)
   }
+  return(psi)
+}
+
+generate_basis <- function(n) {
+  basis <- c()
+  total_states <- 2^(2 * n + 5 + (2 * n + 3))  # Total states include `t` register (2n+3 qubits), `reg1`, `reg2`, helpers, and control bit
+  
+  for (i in 0:(total_states - 1)) {
+    t <- i %/% (2^(2 * n + 5))  # Extract `t` (most significant qubits)
+    xbits <- (i %/% (2^(n + 5))) %% 2^n  # Extract `reg1`
+    reg2 <- (i %/% (2^5)) %% 2^n  # Extract `reg2`
+    helpers <- c((i %/% 16) %% 2, (i %/% 8) %% 2, (i %/% 4) %% 2, (i %/% 2) %% 2)  # Extract the 4 helper qubits
+    c_bit <- i %% 2  # Extract the control bit
+    
+    basis[i + 1] <- paste0(
+      "|t=", t, 
+      ">|xbits=", xbits, 
+      ">|reg2=", reg2, 
+      ">|helpers=", paste(helpers, collapse = ""), 
+      ">|c=", c_bit, ">"
+    )
+  }
+  
   return(basis)
 }
+n <- 2
+basis <- generate_basis(n)
+bits_total <- 4*n+7+1 
+tbits_total <- 2*n+3
 
+q <- qstate(bits_total, basis=basis)
+q <- X(1) * q
+q <- X(8) * q
+q <- X(9) * q
+print(q)
 
+# q <- phase_estimation(bitmas=c(bits_total-tbits_total:bits_total),
+#                       FUN=cexpmodN, x=q, y=1, N=7, xbits=bits_total-tbits_total-n:bits_total, reg2=bits_total-tbits_total-2*n:bits_total-tbits_total-n, helpers=bits_total-tbits_total-2*n-4:bits_total-tbits_total-2*n)
+# # q <- X(6) * q
+# print(q)
 
-# create_basis_mult <- function(n) {
-#   basis <- c()
-#   for(i in c(0:(2^n
-basis <- c()
-for(i in c(0:(2^11-1))) {
-  basis[i + 1] <-
-    paste0("|xbits=", i %/% (32*2^3) , ">|reg2=", (i %/% 32) %% 2^3 ,
-           "|helpers=", (i %/% 16) %% 2,
-           (i %/% 8) %% 2, (i %/% 4) %% 2,
-           (i%/%2) %% 2, ">|c=", i%%2, ">")
-}
-
-n <- 11
-# basis <- create_basis(n)
-q <- qstate(n, basis=basis)
-q <- H(1) * q
-q <- CNOT(c(1,10)) * q
-
+# q <- H(1) * q
+# q <- CNOT(c(1,10)) * q
+#
 c <- 1
 helpers <- c(2:5)
-reg2 <- c(6:8)
-xbits <- c(9:11)
-N <- 5
-# res <- cmultmodN(c, q, y=3, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
+reg2 <- c(6:7)
+xbits <- c(8:9)
+bitmas <- c(10:bits_total)
+N <- 3
+
+q <- phase_estimation(bitmas=bitmas,
+                      FUN=cexpmodN, x=q, y=1, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
+
+
+res = measure(q, repetitions=5000)
+print(res)
+print(q)
+plot(hist(res))
+# res <- cmultmodN(c, q, y=2, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
 # print(res)
+
 # res <- cmultmodN(c, res, y=3, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
 # print(res)
 # res <- cmultmodN(c, res, y=3, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
@@ -247,7 +278,7 @@ continued_fraction <- function(x, eps=1e-14, k_max=100){
   return(k)
 }
 
-print(continued_fraction(pi))
+# print(continued_fraction(pi))
 
 
 
