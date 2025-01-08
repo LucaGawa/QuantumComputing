@@ -157,16 +157,35 @@ cmultmodN <- function(c, psi, y, N, xbits, reg2, helpers){
   return(psi)
 }
 
+# cexpmodN <- function(c, j, x, y, N, xbits, reg2, helpers){
+#   # controlled version of |x>|0> -> |x^j*y mod N>|0>
+#   # xbits has to have the same length as reg1
+#   # 4 helper bits are required
+#   psi <- x
+#   for (i in c(1:j)) {
+#     psi <- cmultmodN(c, psi, y, N, xbits, reg2, helpers)
+#   }
+#   return(psi)
+# }
+
 cexpmodN <- function(c, j, x, y, N, xbits, reg2, helpers){
-  # controlled version of |x>|0> -> |x^j*y mod N>|0>
+  # controlled version of |x>|0> -> |x^j mod N>|0>
   # xbits has to have the same length as reg1
   # 4 helper bits are required
   psi <- x
-  for (i in c(1:j)) {
-    psi <- cmultmodN(c, psi, y, N, xbits, reg2, helpers)
+  ab <- as.integer(intToBits(j))
+  n <- max(which(ab == 1))
+  y2 <- y %% N
+  for (i in c(1:n)) {
+    if (ab[i] == 1) {
+    psi <- cmultmodN(c, psi, y=y2, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
+    }
+    y2 <- ((y2 %% N) * (y2 %% N)) %% N
   }
   return(psi)
 }
+
+
 
 generate_basis <- function(n) {
   basis <- c()
@@ -190,16 +209,17 @@ generate_basis <- function(n) {
   
   return(basis)
 }
-n <- 2
+n <- 3
 basis <- generate_basis(n)
 bits_total <- 4*n+7+1 
 tbits_total <- 2*n+3
 
-q <- qstate(bits_total, basis=basis)
-q <- X(1) * q
-q <- X(8) * q
-q <- X(9) * q
-print(q)
+# q <- qstate(bits_total, basis=basis)
+# q <- X(1) * q
+# q <- X(9) * q
+# # q <- X(9) * q
+#
+# print(q)
 
 # q <- phase_estimation(bitmas=c(bits_total-tbits_total:bits_total),
 #                       FUN=cexpmodN, x=q, y=1, N=7, xbits=bits_total-tbits_total-n:bits_total, reg2=bits_total-tbits_total-2*n:bits_total-tbits_total-n, helpers=bits_total-tbits_total-2*n-4:bits_total-tbits_total-2*n)
@@ -208,22 +228,48 @@ print(q)
 
 # q <- H(1) * q
 # q <- CNOT(c(1,10)) * q
-#
+
+# ##### 
+# # n <- 2
+# #####
+# c <- 1
+# helpers <- c(2:5)
+# reg2 <- c(6:7)
+# xbits <- c(8:9)
+# bitmas <- c(10:bits_total)
+# N <- 3
+# y <- 2
+
+#####
+n <- 3
+#####
 c <- 1
 helpers <- c(2:5)
-reg2 <- c(6:7)
-xbits <- c(8:9)
-bitmas <- c(10:bits_total)
-N <- 3
+reg2 <- c(6:8)
+xbits <- c(9:11)
+N <- 7
+y <- 3
+bitmas <- c(12:bits_total)
 
-q <- phase_estimation(bitmas=bitmas,
-                      FUN=cexpmodN, x=q, y=1, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
+# q <- phase_estimation(bitmas=bitmas,
+#                       FUN=cexpmodN, x=q, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
+
+# phi = 0
+# for (bit in bitmas) {
+#   res <- summarmeasure(q, repetitions=5000, bit=bit)
+#   print(res)
+#   # resbits <- genStateNumber(whic
+#   # print(resbits)
+# }
 
 
-res = measure(q, repetitions=5000)
-print(res)
-print(q)
-plot(hist(res))
+# res = summary(measure(q, repetitions=5000))
+# resbits <- genStateNumber(which(res$value==1)-1, tbits_total+1)
+# phi <- sum(resbits[1:tbits_total] / 2^(1:tbits_total))
+# print(phi)
+
+# print(q)
+# hist(res)
 # res <- cmultmodN(c, q, y=2, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
 # print(res)
 
@@ -275,10 +321,11 @@ continued_fraction <- function(x, eps=1e-14, k_max=100){
 
     x <- 1/frac_part
 }
+  print(q)
   return(k)
 }
 
-# print(continued_fraction(pi))
+print(continued_fraction(79/2^9))
 
 
 
