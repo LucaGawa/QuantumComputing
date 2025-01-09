@@ -1,4 +1,6 @@
+# some part of the code is based on the ideas and/or the implementation of the qsimularR vignettes (https://cran.r-project.org/web/packages/qsimulatR/vignettes/)
 library("qsimulatR")
+
 
 generate_basis <- function(n) {
   # generates a basis for the quantum state with the necessary registers for the 
@@ -44,17 +46,21 @@ write_measurement <- function(object, file, ...) {
   close(con)
 }
 
-import_t_values <- function(file_path) {
+import_t_values <- function(file_path, threshold){
   # reads the exported values from the function "write_measurement" and extracts the t values
   # into an array
+  # threshold is the necessary number of measurements that a value is considered valid and not as random
   lines <- readLines(file_path)
-  
+
   t_values <- integer()
   
   for (i in 2:length(lines)) {
     line <- lines[i]
+    num_measured <- as.integer(sub("^.*\\(\\s*(\\d+)\\s*\\)\\s.*", "\\1", line)) 
+    if (!is.na(num_measured) && num_measured > threshold) {
     t_value <- as.integer(sub(".*\\|t=([0-9]+)>.*", "\\1", line))
     t_values <- c(t_values, t_value)
+    } 
   }
    
   return(unique(t_values))
@@ -228,7 +234,6 @@ cexpmodN <- function(c, a, psi, y, N, xbits, reg2, helpers){
   # controlled version of |x>|0> -> |x^a mod N>|0>
   # xbits has to have the same length as reg1
   # 4 helper bits are required
-  print(a)
   abin <- as.integer(intToBits(a))
   n <- max(which(abin == 1))
   y2 <- y %% N
@@ -286,7 +291,7 @@ qpe_order_finding <- function(t_bits, psi, y, N, xbits, reg2, helpers){
 
   j <- 1
   for (i in t_bits){ # apply the controlled U gates
-    print(j)
+    cat(sprintf("Progress: qpe bit %d of %d\n", j, length(t_bits)))
     psi <- cexpmodN(c=i, a=2^(j-1), psi=psi, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
     j <- j + 1
   }
@@ -312,27 +317,31 @@ y <- 3
 t_bits <- c(11:bits_total)
 
 ##############################################################################
-# for saving the time of the phase estimation this part can be commented out #
-# perform the phase estimation algorithm
-q <- qpe_order_finding(t_bits=t_bits, psi=q, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
-res <- measure(q, repetitions = 7000)
-write_measurement(res, "measurement_results_fast.txt") # write values to file
+# for saving the time of the phase estimation this part can be commented out 
+q <- qpe_order_finding(t_bits=t_bits, psi=q, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers) # perform the phase estimation algorithm
+res <- measure(q, repetitions = 10000) # measure the qubit state
+write_measurement(res, "measurement_results.txt") # write values to file
 ##############################################################################
 
-t_values <- import_t_values("measurement_results_fast.txt") # read all measured t values
+t_values <- import_t_values("measurement_results.txt", threshold=100) # read all t values which were more than 100 times measured
   
 fracts <- c()
 for (value in t_values){
+  if (value != 0){ # skip the 0 values since it is no useful value for the continued fraction
   frac = continued_fraction(value/2^tbits_total) # convert the t values to float numbers and apply the continued fraction algorithm to get the q from phi= p/q
   fracts <- c(fracts, frac)
+  }
 }
 
-values <- sort(unique(fracts)) # sort and remove duplicates
+mask <- (fracts < 100) # filter out all values larger than 100 (could actually be already < N but so it shows that no other values lower then 100 were found)
+hist(fracts[mask], breaks = seq(min(fracts[mask]) - 0.5, max(fracts[mask]) + 0.5, by = 1), xlab = "q", main = "Distribution of found q values smaler than 100") 
+
+values <- sort(unique(fracts[mask])) # sort and remove duplicates
 
 i = 1
 while(values[i] <= N){
   r <- values[i]
-  if ((3^r %% N == 1) && (r > 0)){ # check which q fulfills the equation 3^r mod N = 1
+  if ((3^r %% N == 1) && (r > 0)){ # check which q fulfills the equation 3^r mod N = 1 skip the 0 value, since it trivially fulfills the equation
     # stop the search if a solution is found
     print(r) # print the found solution 
     break
