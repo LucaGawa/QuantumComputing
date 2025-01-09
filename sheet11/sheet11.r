@@ -1,5 +1,27 @@
 library("qsimulatR")
 
+generate_basis <- function(n) {
+  # generates a basis for the quantum state with the necessary registers for the 
+  # order finding algorithm
+  basis <- c()
+  total_states <- 2^(2 * n + 4 + (2 * n + 3))   
+  for (i in 0:(total_states - 1)) {
+    t <- i %/% (2^(2 * n + 4))  
+    xbits <- (i %/% (2^(n + 4))) %% 2^n  
+    reg2 <- (i %/% (2^4)) %% 2^n
+    helpers <- c((i %/% 16) %% 2, (i %/% 8) %% 2, (i %/% 4) %% 2, (i %/% 2) %% 2) 
+    
+    basis[i + 1] <- paste0(
+      "|t=", t, 
+      ">|xbits=", xbits, 
+      ">|reg2=", reg2, 
+      ">|helpers=", paste(helpers, collapse = ""), ">"
+    )
+  }
+  
+  return(basis)
+}
+
 write_measurement <- function(object, file, ...) {
   # helper function for writing the measurement results to a file due to 
   # to long calculation times
@@ -8,24 +30,23 @@ write_measurement <- function(object, file, ...) {
   con <- file(file, "w")
   
   if (is.na(object$bit)) {
-    # Write details for all bits measured
     cat("All bits have been measured", object$repetitions, "times with the outcome:\n", file = con)
     tmp.state <- qstate(object$nbits, basis = object$basis)
     tmp.state@coefs <- as.complex(object$value)
-    capture.output(show(tmp.state), file = con)  # Write state information to file
+    capture.output(show(tmp.state), file = con) 
   } else {
-    # Write details for a single bit measurement
     cat("Bit", object$bit, "has been measured", object$repetitions, "times with the outcome:\n", file = con)
     ones <- sum(object$value)
     zeros <- object$repetitions - ones
     cat("0: ", zeros, "\n1: ", ones, "\n", file = con)
   }
 
-  # Close the connection
   close(con)
 }
 
 import_t_values <- function(file_path) {
+  # reads the exported values from the function "write_measurement" and extracts the t values
+  # into an array
   lines <- readLines(file_path)
   
   t_values <- integer()
@@ -85,13 +106,6 @@ modinv <- function(a, n){
   return(res[2] %% n)
 }
 
-
-
-
-# cmult <- function(c, psi, y, xbits){
-#   n <- length(xbits)
-#   q <- cqft(c, psi, bits=xbits)
-
 add <- function(psi, y, xbits){
   # Add the integer y to the register xbits (representing x) (mod 2^n) where n is the number of bits in x
   # psi has to be a qstate object with c is an additional control bit
@@ -134,7 +148,9 @@ cis.less <- function(c, psi, y, a, c1, xbits){
 }
 
 caddmodN <- function(c, psi, y, N, a, c1, c2, xbits){
-  
+  ###############
+  ###  TASK 1 ###
+  ###############
   n <- length(xbits)
   
   # make sure that y is smaller than N
@@ -164,9 +180,11 @@ caddmodN <- function(c, psi, y, N, a, c1, c2, xbits){
   return(q)
 }
 
-# caddmodN <- function(c, psi, y, N, a, c1, c2, xbits){
 
 cmultmodN <- function(c, psi, y, N, xbits, reg2, helpers){
+  ################# 
+  ###  TASK 2  ####
+  #################
   # controlled version of |x>|0> -> |x*y mod N>|0>
   # xbits has to have the same length as reg1
   # 4 helper bits are required
@@ -196,201 +214,37 @@ cmultmodN <- function(c, psi, y, N, xbits, reg2, helpers){
   return(psi)
 }
 
-cexpmodNs <- function(c, j, psi, y, N, xbits, reg2, helpers){
-  # controlled version of |x>|0> -> |x^j*y mod N>|0>
+cexpmodNs <- function(c, a, psi, y, N, xbits, reg2, helpers){
+  # controlled version of |x>|0> -> |x^a*y mod N>|0>
   # xbits has to have the same length as reg1
   # 4 helper bits are required
-  for (i in c(1:j)) {
+  for (i in c(1:a)) {
     psi <- cmultmodN(c, psi, y, N, xbits, reg2, helpers)
   }
   return(psi)
 }
 
-cexpmodN <- function(c, j, psi, y, N, xbits, reg2, helpers){
-  # controlled version of |x>|0> -> |x^j mod N>|0>
+cexpmodN <- function(c, a, psi, y, N, xbits, reg2, helpers){
+  # controlled version of |x>|0> -> |x^a mod N>|0>
   # xbits has to have the same length as reg1
   # 4 helper bits are required
-  print(j)
-  ab <- as.integer(intToBits(j))
-  n <- max(which(ab == 1))
+  print(a)
+  abin <- as.integer(intToBits(a))
+  n <- max(which(abin == 1))
   y2 <- y %% N
 for (i in c(1:n)) {
-    if (ab[i] == 1) {
+    if (abin[i] == 1) { # if statement to save one bit like qsimulatR vignettes since the code is already very slow in R. If that is not okay, the cexpmodNs function can be used instead
     psi <- cmultmodN(c, psi, y=y2, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
     }
-    y2 <- ((y2 %% N) * (y2 %% N)) %% N
+    y2 <- (y2 * y2) %% N
   }
   return(psi)
 }
-
-qpe_order_finding <- function(t_bits, psi, y, N, xbits, reg2, helpers){
-  psi <- X(xbits[1]) * psi
-  print(psi)
-  for (i in t_bits){
-    psi <- H(i) * psi
-  }
-  j <- 1
-  for (i in t_bits){
-    print(j)
-    psi <- cexpmodNs(c=i, j=j, psi=psi, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
-    j <- j + 1
-  }
-  psi <- qft(psi, bits=t_bits, inverse=TRUE)
-  return(psi)
-}
-
-generate_basis <- function(n) {
-  basis <- c()
-  total_states <- 2^(2 * n + 4 + (2 * n + 3))  # Total states include `t` register (2n+3 qubits), `reg1`, `reg2`, and helpers (no control bit)
-  
-  for (i in 0:(total_states - 1)) {
-    t <- i %/% (2^(2 * n + 4))  # Extract `t` (most significant qubits)
-    xbits <- (i %/% (2^(n + 4))) %% 2^n  # Extract `reg1`
-    reg2 <- (i %/% (2^4)) %% 2^n  # Extract `reg2`
-    helpers <- c((i %/% 16) %% 2, (i %/% 8) %% 2, (i %/% 4) %% 2, (i %/% 2) %% 2)  # Extract the 4 helper qubits
-    
-    basis[i + 1] <- paste0(
-      "|t=", t, 
-      ">|xbits=", xbits, 
-      ">|reg2=", reg2, 
-      ">|helpers=", paste(helpers, collapse = ""), ">"
-    )
-  }
-  
-  return(basis)
-}
-
-n <- 3
-basis <- generate_basis(n)
-bits_total <- 4*n+7 
-tbits_total <- 2*n+3
-
-q <- qstate(bits_total, basis=basis)
-# q <- X(8) * q
-# q <- X(8) * q
-# print(q)
-
-# q <- X(9) * q
-# q <- H(10) * q
-# q <- H(11) * q
-
-# n <- 3
-# q <- qstate(n)
-# q <- H(1) * q
-# q <- H(3) * q
-# res <- summary(measure(q, repetitions=5000))
-# print(res$value)
-
-# q <- phase_estimation(bitmas=c(bits_total-tbits_total:bits_total),
-#                       FUN=cexpmodN, x=q, y=1, N=7, xbits=bits_total-tbits_total-n:bits_total, reg2=bits_total-tbits_total-2*n:bits_total-tbits_total-n, helpers=bits_total-tbits_total-2*n-4:bits_total-tbits_total-2*n)
-# # q <- X(6) * q
-# print(q)
-
-# q <- H(1) * q
-# q <- CNOT(c(1,10)) * q
-
-##### 
-# n <- 2
-#####
-# c <- 1
-# helpers <- c(2:5)
-# reg2 <- c(6:7)
-# xbits <- c(8:9)
-# bitmas <- c(10:bits_total)
-# N <- 1
-# y <- 2
-
-#####
-# n <- 3
-#####
-helpers <- c(1:4)
-reg2 <- c(5:7)
-xbits <- c(8:10)
-N <- 7
-y <- 3
-t_bits <- c(11:bits_total)
-
-
-
-summary(measure(q, repetitions=1000))
-#
-# q <- phase_estimation(bitmas=bitmas,
-#                       FUN=cexpmodN, psi=q, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
-
-q <- qpe_order_finding(t_bits=t_bits, psi=q, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
-
-res <- measure(q, repetitions = 7000)
-write_measurement(res, "measurement_results_slow.txt")
-summary(res)
-
-t_values <- import_t_values("measurement_results_slow.txt")
-print(t_values)
-
-# # # phase estimation
-# for (bit in bitmas) {
-#   q <- H(bit) * q
-# }
-# for (j in bitmas) {
-#   for (i in c(1:j)) {
-#     q <- cmultmodN(c, q, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
-#   }
-# }
-#
-# q <- qft(q, bits=bitmas, inverse=TRUE)
-
-# print(summary(measure(q, repetitions=5000)))
-# write.table(measure(q, repetitions=5000), file="output.txt", row.names=FALSE, col.names=FALSE)
-
-# xtemp = measure(q, repetitions=5000)
-
-# t_values <- numeric()
-# for (i in 1:(2^bits_total)) {
-#   if (xtemp$prob[i] != 0){
-#     string <- xtemp$basis[i]
-#     print(string)
-#     t_value <- as.integer(sub(".*\\|t=([0-9]+)>.*", "\\1", string))
-#     t_values <- c(t_values, t_value)
-#   }
-# }
-
-
-# write.table(t_values, file="t_values.txt", row.names=FALSE, col.names=FALSE)
-
-# phi = 0
-# for (bit in bitmas) {
-#   res <- summarmeasure(q, repetitions=5000, bit=bit)
-#   print(res)
-#   # resbits <- genStateNumber(whic
-#   # print(resbits)
-# }
-
-
-# res = summary(measure(q, repetitions=5000))
-# resbits <- genStateNumber(which(res$value==1)-1, tbits_total+1)
-# phi <- sum(resbits[1:tbits_total] / 2^(1:tbits_total))
-# print(phi)
-
-# print(q)
-# hist(res)
-# res <- cmultmodN(c, q, y=2, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
-# print(res)
-
-# res <- cmultmodN(c, res, y=3, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
-# print(res)
-# res <- cmultmodN(c, res, y=3, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
-# print(res)
-# res <- cmultmodN(c, res, y=3, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
-# print(res)
-
-# q <- X(1) * q
-# q <- caddmodN(c=1, psi=q, y=5, N=12, a=4, c1=2, c2=3, xbits=5:n)
-# q <- caddmodN(c=1, psi=q, y=4, N=7, a=4, c1=2, c2=3, xbits=5:n)
-# print(q)
-
-
-# print(summands(3, 2^3, 3))
 
 continued_fraction <- function(x, eps=1e-14, k_max=100){
+  #################
+  ###  TASK 3  ####
+  #################
   # compute the continued fraction of x up to a precision of eps
   # or a maximum of k_max iterations
   k <- c()
@@ -412,32 +266,75 @@ continued_fraction <- function(x, eps=1e-14, k_max=100){
 
     frac_part <- x - kn
 
-     # Break condition
-
-  
+     # Break condition if precision is reached
       if (abs(x0 - sn) < eps) {
         break
       }
 
     x <- 1/frac_part
 }
-  # print(q)
   return(q)
 }
 
+qpe_order_finding <- function(t_bits, psi, y, N, xbits, reg2, helpers){
+  # apply the phase estimation algorithm to the order finding problem
+  psi <- X(xbits[1]) * psi # set the first bit of x to 1 such that is an eigenstate of U 
+
+  for (i in t_bits){
+    psi <- H(i) * psi # apply Hadamard gate to the t register
+  }
+
+  j <- 1
+  for (i in t_bits){ # apply the controlled U gates
+    print(j)
+    psi <- cexpmodN(c=i, a=2^(j-1), psi=psi, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
+    j <- j + 1
+  }
+  psi <- qft(psi, bits=t_bits, inverse=TRUE)
+  return(psi)
+}
+
+###############################  MAIN  ####################################
+
+# define basis and parameters
+n <- 3
+basis <- generate_basis(n)
+bits_total <- 4*n+7  
+tbits_total <- 2*n+3
+
+q <- qstate(bits_total, basis=basis)
+
+helpers <- c(1:4)
+reg2 <- c(5:7)
+xbits <- c(8:10)
+N <- 7
+y <- 3
+t_bits <- c(11:bits_total)
+
+##############################################################################
+# for saving the time of the phase estimation this part can be commented out #
+# perform the phase estimation algorithm
+q <- qpe_order_finding(t_bits=t_bits, psi=q, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
+res <- measure(q, repetitions = 7000)
+write_measurement(res, "measurement_results_fast.txt") # write values to file
+##############################################################################
+
+t_values <- import_t_values("measurement_results_fast.txt") # read all measured t values
+  
 fracts <- c()
 for (value in t_values){
-  # print(value) 
-  frac = continued_fraction(value/2^tbits_total)
+  frac = continued_fraction(value/2^tbits_total) # convert the t values to float numbers and apply the continued fraction algorithm to get the q from phi= p/q
   fracts <- c(fracts, frac)
 }
 
-values <- sort(unique(fracts))
+values <- sort(unique(fracts)) # sort and remove duplicates
+
 i = 1
 while(values[i] <= N){
   r <- values[i]
-  if ((3^r %% N == 1) && (r > 0)){
-    print(r)
+  if ((3^r %% N == 1) && (r > 0)){ # check which q fulfills the equation 3^r mod N = 1
+    # stop the search if a solution is found
+    print(r) # print the found solution 
     break
   }
   i <- i + 1
