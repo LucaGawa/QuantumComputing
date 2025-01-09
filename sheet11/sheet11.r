@@ -334,7 +334,7 @@ for (value in t_values){
 }
 
 mask <- (fracts < 100) # filter out all values larger than 100 (could actually be already < N but so it shows that no other values lower then 100 were found)
-hist(fracts[mask], breaks = seq(min(fracts[mask]) - 0.5, max(fracts[mask]) + 0.5, by = 1), xlab = "q", main = "Distribution of found q values smaler than 100") 
+hist(fracts[mask], breaks = seq(min(fracts[mask]) - 0.5, max(fracts[mask]) + 0.5, by = 1), xlab = "q", main = "Distribution of found q values smaller than 100") 
 
 values <- sort(unique(fracts[mask])) # sort and remove duplicates
 
