@@ -196,16 +196,15 @@ cmultmodN <- function(c, psi, y, N, xbits, reg2, helpers){
   return(psi)
 }
 
-# cexpmodN <- function(c, j, x, y, N, xbits, reg2, helpers){
-#   # controlled version of |x>|0> -> |x^j*y mod N>|0>
-#   # xbits has to have the same length as reg1
-#   # 4 helper bits are required
-#   psi <- x
-#   for (i in c(1:j)) {
-#     psi <- cmultmodN(c, psi, y, N, xbits, reg2, helpers)
-#   }
-#   return(psi)
-# }
+cexpmodNs <- function(c, j, psi, y, N, xbits, reg2, helpers){
+  # controlled version of |x>|0> -> |x^j*y mod N>|0>
+  # xbits has to have the same length as reg1
+  # 4 helper bits are required
+  for (i in c(1:j)) {
+    psi <- cmultmodN(c, psi, y, N, xbits, reg2, helpers)
+  }
+  return(psi)
+}
 
 cexpmodN <- function(c, j, psi, y, N, xbits, reg2, helpers){
   # controlled version of |x>|0> -> |x^j mod N>|0>
@@ -233,7 +232,7 @@ qpe_order_finding <- function(t_bits, psi, y, N, xbits, reg2, helpers){
   j <- 1
   for (i in t_bits){
     print(j)
-    psi <- cexpmodN(c=i, j=j, psi=psi, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
+    psi <- cexpmodNs(c=i, j=j, psi=psi, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
     j <- j + 1
   }
   psi <- qft(psi, bits=t_bits, inverse=TRUE)
@@ -313,17 +312,18 @@ t_bits <- c(11:bits_total)
 
 
 
-# summary(measure(q, repetitions=1000))
-
+summary(measure(q, repetitions=1000))
+#
 # q <- phase_estimation(bitmas=bitmas,
 #                       FUN=cexpmodN, psi=q, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
-# q <- qpe_order_finding(t_bits=t_bits, psi=q, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
-#
-# res <- measure(q, repetitions = 7000)
-# write_measurement(res, "measurement_results.txt")
-# summary(res)
 
-t_values <- import_t_values("measurement_results.txt")
+q <- qpe_order_finding(t_bits=t_bits, psi=q, y=y, N=N, xbits=xbits, reg2=reg2, helpers=helpers)
+
+res <- measure(q, repetitions = 7000)
+write_measurement(res, "measurement_results_slow.txt")
+summary(res)
+
+t_values <- import_t_values("measurement_results_slow.txt")
 print(t_values)
 
 # # # phase estimation
@@ -428,8 +428,8 @@ continued_fraction <- function(x, eps=1e-14, k_max=100){
 fracts <- c()
 for (value in t_values){
   # print(value) 
-  q = continued_fraction(value/2^tbits_total)
-  fracts <- c(fracts, q)
+  frac = continued_fraction(value/2^tbits_total)
+  fracts <- c(fracts, frac)
 }
 
 values <- sort(unique(fracts))
