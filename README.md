@@ -70,6 +70,6 @@ Compiling with
 The package `qsimulatR` is required. The found r value is printed. 
 The code is very slow in this R implementation. The result of the phase estimation algorithm can therefore be found in the file `sheet11/measurement_results.txt`. To safe time and just see the result, one can comment out the phase estimation part and just run the continued fraction algorithm with the imported values. 
 
-!That is works one has to be in the sheet 11 directory or change the path!
+!That this works one has to be in the sheet 11 directory or change the path!
 
 Rplots.pdf contains a histogram of the most likely r values according to the phase estimation and the continued fraction algorithm. 
