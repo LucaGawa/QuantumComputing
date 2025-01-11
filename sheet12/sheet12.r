@@ -1,15 +1,29 @@
 library("qsimulatR")
+library(hash)
 
-# basis <- c()
-n <- 2^13
-basis <- character(n)
-for(i in c(0:(2^13-1))) {
+create.state <- function() {
+basis <- c()
+for (i in c(0:(2^13-1))) {
   basis[i + 1] <-
-    paste0("|helper=", sprintf("%06d", as.integer(intToBits(i %/% 2^7)[1:6])),
-           ">|main=", sprintf("%07d", as.integer(intToBits(i %% 2^7)[1:7])),
-           ">")
+    paste0("|helper=", 
+           (i %/% 2^13) %% 2,
+           (i %/% 2^12) %% 2,
+           (i %/% 2^11) %% 2,
+           (i %/% 1024) %% 2,
+           (i %/% 256) %% 2,
+           (i %/% 128) %% 2,
+           ">|main=", 
+           (i %/% 64) %% 2,
+           (i %/% 32) %% 2,
+           (i %/% 16) %% 2,
+           (i %/% 8) %% 2, 
+           (i %/% 4) %% 2,
+           (i%/%2) %% 2, 
+           i%%2, ">")
 }
-
+q <- qstate(13, basis = basis)
+return(q)
+}
 
 encode <- function(q, bits) {
 q <- CNOT(c(bits[1], bits[7])) * q
@@ -201,26 +215,22 @@ project.g6 <- function(q, main_bits, helper){
 #
 # # q0 <- qstate(13, basis = basis)
 # # q1 <- qstate(13, basis = basis)
-q0 <- qstate(13)
-q1 <- qstate(13)
-q1 <- X(1) * q1
-main_bits <- c(1:7)
+# q0 <- qstate(13, basis = basis)
+# q1 <- qstate(13, basis = basis)
+# q1 <- X(1) * q1
+# main_bits <- c(1:7)
+#
+# print("q0")
+# print(q0)
+# print("q1")
+# print(q1)
+#
+# q <- encode(q0, c(1:7))
+#
+# print("encoded")
+# print(q)
 
-print("q0")
-print(q0)
-print("q1")
-print(q1)
-
-q <- encode(q0, c(1:7))
-
-print("encoded")
-print(q)
-
-plot.eigs <- function(gate) {
-for (i in main_bits) {
-  q0 <- qstate(13)
-  q <- encode(q0, main_bits)
-  q <- gate(i) * q
+gen.code.string <- function(q, main_bits) {
 
   q <- project.g4(q, main_bits, 11) #todo check why order is relevant
   q <- project.g1(q, main_bits, 8)
@@ -239,36 +249,60 @@ m5 <- measure(q, 12, rep=1)
 m6 <- measure(q, 13, rep=1)
 
 values <- c(m1$value, m2$value, m3$value, m4$value, m5$value, m6$value)
-# values <- c(m1, m2, m3, m4, m5, m6)
 
 string <- paste(sapply(values, function(mi) ifelse(mi == 1, "-1", "+1")), collapse = "")
+# print(string)
 
-string <- paste0(as.character(substitute(gate)),"(", i, ") = ", string)
+return(string)
+}
+
+find.eigenvalues <- function(plot=FALSE) {
+  main_bits <- c(1:7)
+  h <- hash()
+  h[["+1+1+1+1+1+1"]] <- Id(1)
+  gates <- c(X, Y, Z)
+  for (gate in gates) {
+    for (i in main_bits) {
+      q0 <- create.state()
+
+      q <- encode(q0, main_bits)
+      q <- gate(i) * q
+
+      string <- gen.code.string(q, main_bits)
+      h[[string]] <- gate(i)
+
+      if (plot) {
+        string <- paste0(as.character(substitute(gate)),"(", i, ") = ", string)
+        print(string)
+      }
+    }
+  }
+  return(h)
+}
+
+
+
+h = find.eigenvalues() # precalculate all possible eigenvalues for the stabilizers and X,Y,Z Errors
+
+
+main_bits <- c(1:7)
+q0 <- create.state() # create an 7+6 qubit state
+q <- encode(q0, main_bits) # encode the state in |0_L>
+print("encoded")
+print(q)
+
+errors <- c("X", "Y", "Z") 
+random_error <- sample(errors, 1)
+q <- noise(main_bits, error = random_error, type=random_error) * q # apply random an X,Y or Z error
+
+print("error")
+print(q)
+
+string <- gen.code.string(q, main_bits) # find the eigenvalue string for the error
 print(string)
 
-}
-}
+q <- h[[string]] * q # correct the error according to the found eigenvalues 
 
+print("corrected")
+print(q)  
 
-plot.eigs(X)
-plot.eigs(Z)
-plot.eigs(Y)
-
-# print("projected")
-# print(q)
-# q <- g1(q, c(1:7))
-# plot(q)
-# print("")
-
-# print(q)
-# # print()  
-# # print(
-# # summary(res)
-# # q <- noise(1:7, error = "X", type="X") * q
-# #
-# # # correct.flip <- function(q, kj
-# #
-# # q <- qstate(21)
-# # print(q)
-# #
-# # plot(q)
