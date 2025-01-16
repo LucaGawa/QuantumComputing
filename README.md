@@ -73,3 +73,11 @@ The code is very slow in this R implementation. The result of the phase estimati
 !That this works one has to be in the sheet 11 directory or change the path!
 
 Rplots.pdf contains a histogram of the most likely r values according to the phase estimation and the continued fraction algorithm. 
+
+### Sheet 12
+Compiling with
+
+```Rscript sheet12/sheet12.r```
+
+The package `qsimulatR` and `hash` (for having dictionaries in R) are required. 
+The codes as well as the state after encoding, after noise and after correction are printed.

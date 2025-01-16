@@ -26,11 +26,19 @@ return(q)
 }
 
 encode <- function(q, bits) {
+# creates the eigenstates of the stabilizers
+# if the input ist |0000000> the output is |0_L>
+# if the input ist |0000001> the output is |1_L>
+# bits are 7 main bits of the state 
+# in addition there should be 6 helper bits but they are theoretically not needed for the encoding
+
+# map |0000001> into |1110000> and act as identity for |0000000>
 q <- CNOT(c(bits[1], bits[7])) * q
 q <- CNOT(c(bits[1], bits[6])) * q
 q <- CNOT(c(bits[1], bits[5])) * q
 q <- CNOT(c(bits[7], bits[1])) * q
 
+# apply the unitary transformations
 
 # (1 + g2g1)
 q <- (CNOT(c(bits[3], bits[4])) * (CNOT(c(bits[3], bits[5])) * (CNOT(c(bits[3], bits[6])) * (H(bits[3]) * q))))
@@ -40,9 +48,9 @@ q <- (CNOT(c(bits[2], bits[4])) * (CNOT(c(bits[2], bits[5])) * (CNOT(c(bits[2], 
 # (1 + g3g2g1)
 q <- (CNOT(c(bits[1], bits[4])) * (CNOT(c(bits[1], bits[6])) * (CNOT(c(bits[1], bits[7])) * (H(bits[1]) * q))))
 # q <- (CNOT(c(1,4)) * (CNOT(c(1,6)) * (CNOT(c(1,7)) * (H(1) * q))))
+
   return(q)
 }
-# map |0000001> into |1110000>
 
 g1 <- function(x,bits) {
     x <- X(bits[1]) * x
@@ -91,11 +99,6 @@ g6 <- function(x,bits) {
     return(x)
 }
 
-Sdagger <- function(bit) {
-  # implements the dagger of the S gate
-  methods::new("sqgate", bit=as.integer(bit), M=array(as.complex(c(1, 0, 0, -1i)), dim=c(2,2)),
-  type="Sd")
-}
 
 project.g1 <- function(q, main_bits, helper){
   # apply g1
@@ -212,51 +215,36 @@ project.g6 <- function(q, main_bits, helper){
   return(q)
 }
 
-#
-# # q0 <- qstate(13, basis = basis)
-# # q1 <- qstate(13, basis = basis)
-# q0 <- qstate(13, basis = basis)
-# q1 <- qstate(13, basis = basis)
-# q1 <- X(1) * q1
-# main_bits <- c(1:7)
-#
-# print("q0")
-# print(q0)
-# print("q1")
-# print(q1)
-#
-# q <- encode(q0, c(1:7))
-#
-# print("encoded")
-# print(q)
 
 gen.code.string <- function(q, main_bits) {
 
-  q <- project.g4(q, main_bits, 11) #todo check why order is relevant
+  # projects all states in the correct basis to the helper bits
+  q <- project.g4(q, main_bits, 11)
   q <- project.g1(q, main_bits, 8)
   q <- project.g2(q, main_bits, 9)
   q <- project.g3(q, main_bits, 10)
-# q <- project.g4(q, main_bits, 11)
   q <- project.g5(q, main_bits, 12)
   q <- project.g6(q, main_bits, 13)
 
+  # measure the helper bits
+  m1 <- measure(q, 8, rep=1)
+  m2 <- measure(q, 9, rep=1)
+  m3 <- measure(q, 10, rep=1)
+  m4 <- measure(q, 11, rep=1)
+  m5 <- measure(q, 12, rep=1)
+  m6 <- measure(q, 13, rep=1)
 
-m1 <- measure(q, 8, rep=1)
-m2 <- measure(q, 9, rep=1)
-m3 <- measure(q, 10, rep=1)
-m4 <- measure(q, 11, rep=1)
-m5 <- measure(q, 12, rep=1)
-m6 <- measure(q, 13, rep=1)
+  values <- c(m1$value, m2$value, m3$value, m4$value, m5$value, m6$value)
 
-values <- c(m1$value, m2$value, m3$value, m4$value, m5$value, m6$value)
-
-string <- paste(sapply(values, function(mi) ifelse(mi == 1, "-1", "+1")), collapse = "")
-# print(string)
+  string <- paste(sapply(values, function(mi) ifelse(mi == 1, "-1", "+1")), collapse = "") # translate form measurement result to eigenvalue (in theory everything could work just with 0 and 1 if used consistently, but since I wrote down the eigenvalues on the sheet in 2 and 3 I have choose this representation for a better comparison)
 
 return(string)
 }
 
 find.eigenvalues <- function(plot=FALSE) {
+  # calculates the all correction codes by measuring the helper bits systematically for all helper bits
+  # if plot is TRUE the eigenvalue strings are printed, otherwise they get just stored in a hash table for later use
+
   main_bits <- c(1:7)
   h <- hash()
   h[["+1+1+1+1+1+1"]] <- Id(1)
@@ -272,7 +260,7 @@ find.eigenvalues <- function(plot=FALSE) {
       h[[string]] <- gate(i)
 
       if (plot) {
-        string <- paste0(as.character(substitute(gate)),"(", i, ") = ", string)
+        string <- paste0(gate(i)@type,"(", i, ") = ", string)
         print(string)
       }
     }
@@ -282,17 +270,22 @@ find.eigenvalues <- function(plot=FALSE) {
 
 
 
-h = find.eigenvalues() # precalculate all possible eigenvalues for the stabilizers and X,Y,Z Errors
+h = find.eigenvalues(plot=TRUE) # precalculate all possible eigenvalues for the stabilizers and X,Y,Z Errors
 
+########################
+######## task 4 ########
+########################
 
 main_bits <- c(1:7)
 q0 <- create.state() # create an 7+6 qubit state
+#q0 <- X(1) * q0 # this one can be commented in in case one wants to create the state |1_L> instead of |0_L>
+
 q <- encode(q0, main_bits) # encode the state in |0_L>
 print("encoded")
 print(q)
 
 errors <- c("X", "Y", "Z") 
-random_error <- sample(errors, 1)
+random_error <- sample(errors, 1) 
 q <- noise(main_bits, error = random_error, type=random_error) * q # apply random an X,Y or Z error
 
 print("error")
