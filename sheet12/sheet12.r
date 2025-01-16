@@ -292,7 +292,6 @@ print("error")
 print(q)
 
 string <- gen.code.string(q, main_bits) # find the eigenvalue string for the error
-print(string)
 
 q <- h[[string]] * q # correct the error according to the found eigenvalues 
 
